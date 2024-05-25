@@ -3,12 +3,15 @@ package main
 import (
 	"github.com/dedsecrattle/todo-application/models"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 var Todos []models.Todo = []models.Todo{}
 
 func main() {
 	app := fiber.New()
+
+	app.Use(cors.New())
 
 	app.Get("/test", func(c *fiber.Ctx) error {
 		return c.SendString("Hello this is Working!")
