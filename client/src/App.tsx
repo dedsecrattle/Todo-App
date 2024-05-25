@@ -1,6 +1,11 @@
 import useSWR, { mutate } from 'swr'
 import './App.css'
-import { Box , Text} from '@chakra-ui/react';
+import { Box ,  List,
+  ListItem,
+  ListIcon,
+  OrderedList,
+  Heading,
+  CheckboxIcon,} from '@chakra-ui/react';
 
 export const ENDPOINT = "http://localhost:4000";
 
@@ -11,17 +16,30 @@ interface Todo {
   done : boolean
 }
 
-async const fetcher = (url: string) => {
-  await fetch(`${ENDPOINT}/${url}`).then((res) => {
-    console.log(res)
-    res.json()
-  });
-}
+const fetcher = (url: string) =>
+  fetch(`${ENDPOINT}/${url}`).then((r) => r.json());
+
 function App() {
   const {data, mutate} = useSWR<Todo[]>("todo", fetcher)
   return (
     <Box>
-      
+      <Heading>
+        Todos
+      </Heading>
+      <OrderedList>
+        {data?.map((todo) => {
+          return (
+            <ListItem>
+              {todo.done ?
+              (<ListIcon as={CheckboxIcon} color='green.500' />)
+              : (<ListIcon as={CheckboxIcon} color='red'/>)
+              }
+              
+              {todo.title}
+            </ListItem>
+          )
+        })}
+      </OrderedList>
     </Box>
   )
 }
