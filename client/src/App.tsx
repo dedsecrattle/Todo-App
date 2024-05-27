@@ -15,7 +15,7 @@ import { Box ,  List,
   ModalFooter,
   ModalHeader,
   ModalOverlay,} from '@chakra-ui/react';
-import { MdCheckBox, MdRadioButtonChecked, MdRadioButtonUnchecked } from 'react-icons/md';
+import { MdCheckBox, MdDelete, MdRadioButtonChecked, MdRadioButtonUnchecked } from 'react-icons/md';
 import { useState } from 'react';
 
 export const ENDPOINT = "http://localhost:4000";
@@ -67,6 +67,11 @@ function App() {
     mutate(updatedData, false)
   }
 
+  const handleDelete = async (id: number) => {
+    const updatedData = await fetch(`${ENDPOINT}/todo/${id}`, {method: "DELETE"}).then((r) => r.json())
+    mutate(updatedData, false)
+  }
+
   return (
     <Flex minH="100vh" bg="gray.100" align="center" justify="center">
       <Center display='flex' flexDirection='column'>
@@ -83,6 +88,7 @@ function App() {
           :<Icon boxSize='8' as={MdRadioButtonUnchecked} color='red.500' onClick = {() => handleDoneClick(todo.id)}></Icon>} 
            <Text fontSize='30px'>{todo.title}</Text> 
            <Text fontSize='20px' border='1px' padding='5'>{todo.body}</Text>
+           <Icon boxSize='8' as={MdDelete} color='red' onClick={() => handleDelete(todo.id)}></Icon>
            </Center>
           </ListItem>})}
           </List>

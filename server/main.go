@@ -92,6 +92,21 @@ func main() {
 		return c.JSON(result)
 	})
 
+	app.Delete("/todo/:id", func(c *fiber.Ctx) error {
+		id := c.Params("id")
+
+		if err != nil {
+			return c.Status(401).SendString("Invalid Id")
+		}
+		DeleteTodoById(id, client)
+		result, err := GetTodos(client)
+
+		if err != nil {
+			fmt.Print("Unable to fetch Todos")
+		}
+		return c.JSON(result)
+	})
+
 	app.Listen(":4000")
 }
 
@@ -158,4 +173,19 @@ func UpdateTodoById(id string, client *mongo.Client) error {
 	}
 
 	return nil
+}
+
+func DeleteTodoById(id string, client *mongo.Client) error {
+	collection := client.Database("todo-app").Collection("todos")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	queryId, err := primitive.ObjectIDFromHex(id)
+	defer cancel()
+	if err != nil {
+		fmt.Println("Unable to Parse ID")
+	}
+	filter := bson.M{"_id": queryId}
+	_, err = collection.DeleteOne(ctx, filter)
+
+	return nil
+
 }
