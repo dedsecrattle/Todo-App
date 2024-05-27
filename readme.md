@@ -19,6 +19,8 @@
 
 `npm run dev`
 
+## Update the mongoDb URI in `.env` file and use the format given in `.env.template`
+
 
 
 
