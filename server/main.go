@@ -38,13 +38,12 @@ func main() {
 
 		for i, t := range Todos {
 			if t.ID == id {
-				Todos[i].Done = true
+				Todos[i].Done = !Todos[i].Done
 				break
 			}
 		}
 
 		return c.JSON(Todos)
-
 	})
 	app.Listen(":4000")
 }

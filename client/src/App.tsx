@@ -1,13 +1,22 @@
 import useSWR, { mutate } from 'swr'
 import { Box ,  List,
   ListItem,
-  ListIcon,
-  OrderedList,
   Heading,
-  CheckboxIcon,
   Text,
-  Icon,} from '@chakra-ui/react';
+  Icon,
+  Flex,
+  Center,
+  Button,
+  Input,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,} from '@chakra-ui/react';
 import { MdCheckBox, MdRadioButtonUnchecked } from 'react-icons/md';
+import { useState } from 'react';
 
 export const ENDPOINT = "http://localhost:4000";
 
@@ -23,25 +32,97 @@ const fetcher = (url: string) =>
 
 function App() {
   const {data, mutate} = useSWR<Todo[]>("todo", fetcher)
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [formData, setFormData] = useState({ title: "", body: ""});
+
+  const handleOpen = () => setIsOpen(true);
+  const handleClose = () => setIsOpen(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const requestOption = {
+      method : "POST",
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body : JSON.stringify({
+        "title": formData.title,
+        "body": formData.body
+      })
+    }
+    const response = await fetch(`${ENDPOINT}/todo`, requestOption).then((r) => r.json())
+    mutate(response)
+    handleClose();
+  };
+
+  const handleDoneClick = async (id: number) => {
+
+    const updated = await fetch(`${ENDPOINT}/todo/${id}`, {method: "PATCH"}).then((r) => r.json())
+    mutate(updated)
+  }
+
   return (
-    <Box display= 'flex' flexDirection='column' justifyContent='center' alignItems='center' margin='1.5rem'>
-      <Heading marginBottom='1.5rem'>
-        Todos
-      </Heading>
-      <List>
-      {data?.map((todo) => {
-        return <ListItem border='1px' padding='1rem' borderRadius='10' margin='1rem'>
-          <Box display='flex' flexDirection='row' w='75%' gap='10' justifyContent='center' alignItems='center' textAlign='center'>
-          {todo.done ? <Icon boxSize={8} as={MdCheckBox} color='green.500'></Icon> 
-          : <Icon boxSize={8} as={MdRadioButtonUnchecked} color='red.500'></Icon> 
-          }
-          <Heading size='xl'>{todo.title}</Heading>
-          <Text fontSize='3xl'>{todo.body}</Text>
-          </Box>
-        </ListItem>
-      })}
-      </List>
-    </Box>
+    <Flex minH="100vh" bg="gray.100" align="center" justify="center">
+      <Center display='flex' flexDirection='column'>
+        <Box bg="white" p={6} rounded="md" boxShadow="md" minW="xl" maxW='xl'>
+          <Heading as="h1" size="xl" textAlign="center" mb={4}>
+            Todos
+          </Heading>
+          <List>
+          {data?.map((todo) => {
+          return <ListItem display='flex' key={`todo_list__${todo.id}`}>
+          <Center gap='5'>
+           {todo.done ? 
+           <Icon boxSize='8' as={MdCheckBox} color='green.500' onClick = {() => handleDoneClick(todo.id)}></Icon>
+          :<Icon boxSize='8' as={MdRadioButtonUnchecked} color='red.500' onClick = {() => handleDoneClick(todo.id)}></Icon>} 
+           <Text fontSize='30px'>{todo.title}</Text> 
+           </Center>
+          </ListItem>})}
+          </List>
+        </Box>
+        <Button bg='red.400' padding='25px' color='white' margin='20px' onClick={handleOpen}> Add Todo</Button>
+    <Modal isOpen={isOpen} onClose={handleClose}>
+    <ModalOverlay />
+    <ModalContent>
+      <ModalHeader>Add New Todo</ModalHeader>
+      <ModalCloseButton />
+      <ModalBody>
+        <form onSubmit={handleSubmit}>
+          <Flex direction="column" mb={4}>
+            <Text mb={2}>Title:</Text>
+            <Input
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+            />
+          </Flex>
+          <Flex direction="column" mb={4}>
+            <Text mb={2}>Body:</Text>
+            <Input
+              name="body"
+              value={formData.body}
+              onChange={handleChange}
+            />
+          </Flex>
+          <ModalFooter>
+            <Button colorScheme="blue" mr={3} type="submit">
+              Submit
+            </Button>
+            <Button variant="ghost" onClick={handleClose}>
+              Cancel
+            </Button>
+          </ModalFooter>
+        </form>
+      </ModalBody>
+    </ModalContent>
+  </Modal>
+      </Center>
+    </Flex>
   )
 }
 
