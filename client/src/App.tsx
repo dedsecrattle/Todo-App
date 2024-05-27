@@ -15,7 +15,7 @@ import { Box ,  List,
   ModalFooter,
   ModalHeader,
   ModalOverlay,} from '@chakra-ui/react';
-import { MdCheckBox, MdRadioButtonUnchecked } from 'react-icons/md';
+import { MdCheckBox, MdRadioButtonChecked, MdRadioButtonUnchecked } from 'react-icons/md';
 import { useState } from 'react';
 
 export const ENDPOINT = "http://localhost:4000";
@@ -52,18 +52,19 @@ function App() {
       },
       body : JSON.stringify({
         "title": formData.title,
-        "body": formData.body
+        "body": formData.body,
+        "done": false
       })
     }
     const response = await fetch(`${ENDPOINT}/todo`, requestOption).then((r) => r.json())
-    mutate(response)
+    const updatedData : Todo[] = [...data || [], {id: response.id ,title: response.title, body: response.body, done: response.done}]
+    mutate(updatedData, false)
     handleClose();
   };
 
   const handleDoneClick = async (id: number) => {
-
-    const updated = await fetch(`${ENDPOINT}/todo/${id}`, {method: "PATCH"}).then((r) => r.json())
-    mutate(updated)
+    const updatedData = await fetch(`${ENDPOINT}/todo/${id}`, {method: "PATCH"}).then((r) => r.json())
+    mutate(updatedData, false)
   }
 
   return (
@@ -76,11 +77,12 @@ function App() {
           <List>
           {data?.map((todo) => {
           return <ListItem display='flex' key={`todo_list__${todo.id}`}>
-          <Center gap='5'>
+          <Center gap='5' padding='5'>
            {todo.done ? 
-           <Icon boxSize='8' as={MdCheckBox} color='green.500' onClick = {() => handleDoneClick(todo.id)}></Icon>
+           <Icon boxSize='8' as={MdRadioButtonChecked} color='green.500' onClick = {() => handleDoneClick(todo.id)}></Icon>
           :<Icon boxSize='8' as={MdRadioButtonUnchecked} color='red.500' onClick = {() => handleDoneClick(todo.id)}></Icon>} 
            <Text fontSize='30px'>{todo.title}</Text> 
+           <Text fontSize='20px' border='1px' padding='5'>{todo.body}</Text>
            </Center>
           </ListItem>})}
           </List>

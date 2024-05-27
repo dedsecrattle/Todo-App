@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/dedsecrattle/todo-application/models"
 	"github.com/gofiber/fiber/v2"
@@ -46,6 +47,8 @@ func main() {
 	}
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
 
+	//coll := client.Database("todo-app").Collection("todos")
+
 	app := fiber.New()
 
 	app.Use(cors.New())
@@ -57,45 +60,102 @@ func main() {
 	app.Post("/todo", func(c *fiber.Ctx) error {
 		var todo models.Todo
 		c.BodyParser(&todo)
-		todo.ID = len(Todos) + 1
-		Todos = append(Todos, todo)
-		return c.JSON(Todos)
+		result, err := CreateTodo(&todo, client)
+
+		if err != nil {
+			fmt.Print("Error inserting Todo ", err)
+		}
+		return c.JSON(result)
 	})
 
 	app.Get("/todo", func(c *fiber.Ctx) error {
-		return c.JSON(Todos)
+		result, err := GetTodos(client)
+
+		if err != nil {
+			fmt.Print("Unable to fetch Todos")
+		}
+		return c.JSON(result)
 	})
 
 	app.Patch("/todo/:id", func(c *fiber.Ctx) error {
-		id, err := c.ParamsInt("id")
+		id := c.Params("id")
 
 		if err != nil {
 			return c.Status(401).SendString("Invalid Id")
 		}
+		UpdateTodoById(id, client)
+		result, err := GetTodos(client)
 
-		for i, t := range Todos {
-			if t.ID == id {
-				Todos[i].Done = !Todos[i].Done
-				break
-			}
+		if err != nil {
+			fmt.Print("Unable to fetch Todos")
 		}
-
-		return c.JSON(Todos)
+		return c.JSON(result)
 	})
 
 	app.Listen(":4000")
 }
 
-func CreateTodo(title, body string, todoCollection mongo.Collection) (*models.Todo, error) {
-	newTodo := models.Todo{
-		Title: title,
-		Body:  body,
-		Done:  false,
-	}
-	result, err := todoCollection.InsertOne(context.TODO(), newTodo)
+func CreateTodo(newTodo *models.Todo, client *mongo.Client) (*models.Todo, error) {
+	collection := client.Database("todo-app").Collection("todos")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	result, err := collection.InsertOne(ctx, newTodo)
 	if err != nil {
 		return nil, err
 	}
-	newTodo.ID = result.InsertedID.(primitive.ObjectID).Hex()
-	return &newTodo, nil
+	insertedID := result.InsertedID.(primitive.ObjectID)
+	newTodo.ID = insertedID
+	return newTodo, nil
+}
+
+func GetTodos(client *mongo.Client) ([]models.Todo, error) {
+	collection := client.Database("todo-app").Collection("todos")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cursor, err := collection.Find(ctx, bson.D{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var todos []models.Todo
+	for cursor.Next(ctx) {
+		var todo models.Todo
+		err := cursor.Decode(&todo)
+		if err != nil {
+			return nil, err
+		}
+		todos = append(todos, todo)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return todos, nil
+}
+
+func UpdateTodoById(id string, client *mongo.Client) error {
+	collection := client.Database("todo-app").Collection("todos")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	queryId, err := primitive.ObjectIDFromHex(id)
+	filter := bson.M{"_id": queryId}
+	var todo models.Todo
+	err = collection.FindOne(ctx, filter).Decode(&todo)
+	if err != nil {
+		return err
+	}
+	update := bson.M{"$set": bson.M{"done": !todo.Done}}
+	defer cancel()
+	if err != nil {
+		fmt.Println("Error parsing the Id")
+	}
+	_, err = collection.UpdateOne(ctx, filter, update)
+
+	if err != nil {
+		fmt.Println("Unable to update the Todo")
+	}
+
+	return nil
 }
